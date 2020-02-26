@@ -18,7 +18,7 @@ class Officer extends Thread {
             int next_arrival_time) {
         this.current_passenger = current_passenger;
         if (this.current_passenger != null) {
-            System.out.println(current_passenger + " is initialized" );
+            // System.out.println(current_passenger + " is initialized" );
         }
         this.current_time = current_time;
         this.next_wakeup_time = next_wakeup_time;
@@ -32,12 +32,12 @@ class Officer extends Thread {
         if (this.current_time == this.next_wakeup_time) {
 
             if (this.current_passenger != null) {
-                System.out.println("hurray");
+                // System.out.println("hurray");
                 this.current_passenger.inspected_timestamp = this.current_time;
                 this.current_passenger.state = Passenger.State.SERVICED;
                 this.serviced_queue.addPassenger(this.current_passenger, Integer.MAX_VALUE);
 
-                System.out.println(this.current_passenger.passenger_id + " is served");
+                // System.out.println(this.current_passenger.passenger_id + " is served");
 
                 this.current_passenger = null;
             }
@@ -48,15 +48,16 @@ class Officer extends Thread {
                 new_passenger.officer_timestamp = this.current_time;
                 this.current_passenger = new_passenger;
 
-                int service_time = Utility.getPoissonRandom(1.0/mu);
+                int service_time = Utility.getNextTime(mu);
                 this.next_wakeup_time += service_time;
+                new_passenger.inspected_timestamp = this.next_wakeup_time;
 
-                System.out.println(this.current_passenger.passenger_id + " is being served");
+                // System.out.println(this.current_passenger.passenger_id + " is being served");
             }
 
             else {
                 this.next_wakeup_time = next_arrival_time;
-                System.out.println("No passenger");
+                // System.out.println("No passenger");
                 // System.out.println(this.current_passenger.passenger_id + " not served");
             }            
         }

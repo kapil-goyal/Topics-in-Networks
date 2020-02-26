@@ -19,4 +19,22 @@ class Passenger {
         this.queue_timestamp = queue_timestamp;
         this.state = State.WAITING;
     }
+
+    public int get_response_time() {
+        if (this.state != State.SERVICED) {
+            return -1;
+        }
+        else {
+            return (this.inspected_timestamp - this.queue_timestamp);
+        }
+    }
+
+    public int get_waiting_time() {
+        if (this.state != State.WAITING) {
+            return (this.officer_timestamp - this.queue_timestamp);
+        }
+        else {
+            return -1;
+        }
+    }
 }
