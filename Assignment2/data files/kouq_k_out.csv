@@ -1,0 +1,11 @@
+Number of Ports,Buffer Size,Knockout,Packet Generation Probability,Queue Type,Average Packet Delay (in slots),Standard Deviation PD (in slots),Average Link Utilization,KOUQ Drop probability
+8,4,0.1,0.5,KOUQ,-nan,-nan,0,0.404675
+8,4,0.2,0.5,KOUQ,3,0,0.402087,0.08615
+8,4,0.3,0.5,KOUQ,3.33766,0.571991,0.488762,0.0113125
+8,4,0.4,0.5,KOUQ,3.4024,0.668019,0.498725,0.000775
+8,4,0.5,0.5,KOUQ,3.4142,0.680374,0.496775,2.5e-05
+8,4,0.6,0.5,KOUQ,3.41747,0.682194,0.498088,5e-05
+8,4,0.7,0.5,KOUQ,3.41822,0.684871,0.498925,0
+8,4,0.8,0.5,KOUQ,3.42588,0.691526,0.499462,0
+8,4,0.9,0.5,KOUQ,3.41816,0.686367,0.499125,0
+8,4,1,0.5,KOUQ,3.40527,0.676149,0.495138,0

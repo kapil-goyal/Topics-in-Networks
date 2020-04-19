@@ -10,6 +10,9 @@ enum queue_type
 // This variable will store current time slot
 int current_time = 0;
 
+// boolean variable to decide wheter to take input from command line
+bool to_take_input = false;
+
 
 // Struct to make packet
 struct Packet {
@@ -44,14 +47,12 @@ struct Packet {
 	}
 };
 
-// boolean variable to decide wheter to take input from command line
-bool to_take_input = true;
 
 // Default value of parameters
 int switch_port_count = 8;			// Nummber of input and output ports
 int buffer_size = 4;				// Buffer size
-float packet_gen_prob = 1;			// packet generation probability at input ports
-queue_type scheduler = ISLIP;		// queue type for each case
+float packet_gen_prob = 0.5;			// packet generation probability at input ports
+queue_type scheduler = INQ;		// queue type for each case
 float knockout = 0.6;				// knockout factor in case of KOUQ scheduler
 string output_file = "out.csv";		// default output file name
 int max_time_slots = 10000;			// default maximum number of slots
@@ -184,7 +185,7 @@ public:
 	
 };
 
-// A class to take of scheduling
+// A class to take care of scheduling
 class Scheduler
 {
 	// The integral value of knockout in case of KOUQ
@@ -317,22 +318,25 @@ public:
 				for (auto it : port_mapper) {
 					auto temp = it.second;
 
+					// if packets are more than k, then increase kouq dropout count
+					if (temp.size() > k) {
+						k_drop++;
+					}
+
 					// select k packets randomly and push them to output queue
 					for (int i = 0; i < k; i++) {
 						if (temp.size() > 0) {
 							int ind = rand() % temp.size();
 							temp[ind].schedule_time = current_time;
-							output_queues[it.first].push_back(temp[ind]);
+							if (output_queues[it.first].size() < buffer_size)
+								output_queues[it.first].push_back(temp[ind]);
+							else
+								dropped_packets.push_back(temp[ind]);
 							temp.erase(temp.begin() + ind);
 						}
 						else {
 							break;
 						}
-					}
-
-					// if packets are more than k, then increase kouq dropout count
-					if (temp.size() > 0) {
-						k_drop++;
 					}
 				}
 				break;
@@ -434,10 +438,21 @@ public:
 	}	
 };
 
+// a function to set default values
+void set_defaults() {
+	// Default value of parameters
+	switch_port_count = 8;			// Nummber of input and output ports
+	buffer_size = 4;				// Buffer size
+	packet_gen_prob = 0.5;			// packet generation probability at input ports
+	knockout = 0.6;				// knockout factor in case of KOUQ scheduler
+	output_file = "out.csv";		// default output file name
+	max_time_slots = 10000;			// default maximum number of slots
+}
+
 // A function to clear data structures used, for the next iteration
 void clearDB() {
 	Packet::counter = 0;
-	int k_drop = 0;	
+	k_drop = 0;	
 	input_queues.clear();
 	output_queues.clear();
 	accept_order.clear();
@@ -475,8 +490,8 @@ void initializeOutputFile() {
 	if (count <= 0) {
 		ofstream outfile;
 		outfile.open(output_file, ios_base::app);
-		outfile << "Number of Ports" << "," << "Buffer Size" << "," << "Knockout" << "," << "Packet Gen Prob" << "," << "Queue Type" << "," << "Avg PD" 
-				<< "," << "Std Dev PD" << "," << "Avg Link Utilization" << "," << "KOUQ Drop prob" << endl;
+		outfile << "Number of Ports" << "," << "Buffer Size" << "," << "Knockout" << "," << "Packet Generation Probability" << "," << "Queue Type" << "," << "Average Packet Delay (in slots)" 
+				<< "," << "Standard Deviation PD (in slots)" << "," << "Average Link Utilization" << "," << "KOUQ Drop probability" << endl;
 		outfile.close();
 	}
 }
@@ -576,52 +591,116 @@ int main(int argc, char *argv[]) {
 	
 	// If we don't want to take command line inputs
 
-	// Set output file name
-	if (scheduler == INQ) {
-		output_file = "INQ.csv";
-	}
-	else if (scheduler == KOUQ) {
-		output_file = "KOUQ.csv";
-	}
-	else {
-		output_file = "ISLIP.csv";
-	}
-
 	// initialize different output ports, buffer sizes and knockouts value
-	vector<int> ports({4,6,8,10,12,14,16});
+	vector<int> ports;
+	for (size_t i = 4; i < 51; i++)
+	{
+		ports.push_back(i);
+	}
 	vector<int> buffer_sizes({2,3,4});
-	vector<float> knockouts;
+	vector<float> knockouts({0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
+	vector<float> probs({0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
+	vector<queue_type> schedulers({INQ, KOUQ, ISLIP});
 
-	// Run simulation in case of KOUQ
-	if (scheduler == KOUQ) {
-		knockouts.push_back(0.6);
-		knockouts.push_back(0.8);
-		knockouts.push_back(1.0);
+	// Run simulation to compare three scheduling techniques
+	for (auto sch : schedulers) {
+		set_defaults();
+		scheduler = sch;
+		string temp;
+		if (scheduler == INQ) {
+			temp = "INQ";
+		}
+		else if (scheduler == KOUQ) {
+			temp = "KOUQ";
+		}
+		else {
+			temp = "ISLIP";
+		}
 
-		for (int i = 0; i < knockouts.size(); ++i)
-		{
-			knockout = knockouts[i];
-			for (int j = 0; j < buffer_sizes.size(); ++j)
-			{
-				buffer_size = buffer_sizes[j];
-				for (int k = 0; k < ports.size(); ++k)
-				{
-					switch_port_count = ports[k];
-					runSimulation();					
-				}
-			}
+		// For different number of ports
+		for (auto it : ports) {
+			switch_port_count = it;
+			output_file = "ports_out.csv";
+			runSimulation();
+		}
+
+		// For different number of packet generation probability
+		for (auto it : probs) {
+			packet_gen_prob = it;
+			output_file = "probs_out.csv";
+			runSimulation();
+		}
+
+		// For different buffer sizes
+		for (auto it : buffer_sizes) {
+			buffer_size = it;
+			output_file = "buffer_size_out.csv";
+			runSimulation();
 		}
 	}
-	// Run simulation in case of ISLIP and INQ
-	else {
-		for (int i = 0; i < buffer_sizes.size(); ++i)
+
+	// For different knockout values in case of KOUQ
+	set_defaults();
+	scheduler = KOUQ;
+	for (auto it : knockouts) {
+		knockout = it;
+		output_file = "kouq_k_out.csv";
+		runSimulation();
+	}
+
+
+	// Run simulation in case of KOUQ
+	set_defaults();
+	scheduler = KOUQ;
+	vector<float> knockouts2({0.6, 0.8, 1.0});
+	for (int i = 0; i < knockouts2.size(); ++i)
+	{
+		knockout = knockouts2[i];
+		for (int k = 0; k < ports.size(); ++k)
 		{
-			buffer_size = buffer_sizes[i];
-			for (int j = 0; j < ports.size(); ++j)
-			{
-				switch_port_count = ports[j];
-				runSimulation();
-			}
+			switch_port_count = ports[k];
+			output_file = "kouq_k_n_out.csv";
+			runSimulation();					
+		}
+	}
+
+	set_defaults();
+	for (int i = 0; i < buffer_sizes.size(); ++i)
+	{
+		buffer_size = buffer_sizes[i];
+		for (int k = 0; k < ports.size(); ++k)
+		{
+			switch_port_count = ports[k];
+			output_file = "kouq_b_n_out.csv";
+			runSimulation();					
+		}
+	}
+
+	set_defaults();
+	scheduler = ISLIP;
+	// Run simulation in case of ISLIP
+	for (int i = 0; i < buffer_sizes.size(); ++i)
+	{
+		buffer_size = buffer_sizes[i];
+		for (int j = 0; j < ports.size(); ++j)
+		{
+			switch_port_count = ports[j];
+			output_file = "islip_b_out.csv";
+			runSimulation();
+		}
+	}
+
+	set_defaults();
+	scheduler = INQ;
+	// Run simulation in case of INQ
+	for (int i = 0; i < buffer_sizes.size(); ++i)
+	{
+		buffer_size = buffer_sizes[i];
+		for (int j = 0; j < ports.size(); ++j)
+		{
+			switch_port_count = ports[j];
+			output_file = "inq_b_out.csv";
+			runSimulation();
 		}
 	}
 

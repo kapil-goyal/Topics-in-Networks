@@ -1,3 +1,0 @@
-Number of Ports,Buffer Size,Knockout,Packet Gen Prob,Queue Type,Avg PD,Std Dev PD,Avg Link Utilization,KOUQ Drop prob
-6,2,0.7,0.3,KOUQ,3.21271,0.494784,0.301667,0
-6,2,0.7,0.3,KOUQ,3.18715,0.424333,0.298333,0
