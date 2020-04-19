@@ -11,7 +11,7 @@ enum queue_type
 int current_time = 0;
 
 // boolean variable to decide wheter to take input from command line
-bool to_take_input = false;
+bool to_take_input = true;
 
 
 // Struct to make packet
